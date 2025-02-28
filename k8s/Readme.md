@@ -207,3 +207,118 @@ Both **gRPC** and **REST** are widely used communication protocols for building 
 - **gRPC** is better suited for internal systems, microservices, and applications requiring high performance and low latency.
 
 The choice between REST and gRPC depends on your specific use case, performance requirements, and the complexity you are willing to handle.
+
+---
+
+# **Kubernetes Scheduler: In-Depth Explanation of Scheduling and Binding Cycles**
+
+The Kubernetes Scheduler is a critical component of the Kubernetes control plane. It is responsible for assigning Pods to Nodes in a cluster based on resource requirements, constraints, and policies. The scheduling process is divided into two main cycles: the **Scheduling Cycle** and the **Binding Cycle**. Each cycle consists of multiple phases that ensure Pods are scheduled and bound to Nodes efficiently and correctly.
+
+---
+
+## **1. Scheduling Cycle**
+
+The Scheduling Cycle is responsible for selecting a suitable Node for a Pod. It consists of the following phases:
+
+### **1.1 Sort**
+- **Purpose**: Orders the list of pending Pods based on their priority and other factors.
+- **Details**: The scheduler uses a priority queue to sort Pods. Higher-priority Pods are scheduled first.
+
+### **1.2 PreEnqueue**
+- **Purpose**: Filters out Pods that cannot be scheduled due to specific conditions (e.g., Pods with unmet dependencies).
+- **Details**: This phase ensures that only schedulable Pods enter the scheduling queue.
+
+### **1.3 PreFilter**
+- **Purpose**: Performs initial checks on the Pod and the cluster state.
+- **Details**: This phase ensures that the Pod meets basic requirements (e.g., resource requests, node selectors) before proceeding to filtering.
+
+### **1.4 Filter**
+- **Purpose**: Filters out Nodes that do not meet the Pod's requirements.
+- **Details**: The scheduler evaluates each Node against the Pod's constraints (e.g., resource availability, taints, tolerations, affinity/anti-affinity rules). Nodes that fail these checks are excluded.
+
+### **1.5 PreScore**
+- **Purpose**: Prepares data for the scoring phase.
+- **Details**: This phase calculates intermediate values or metrics that will be used during the scoring phase.
+
+### **1.6 Normalize**
+- **Purpose**: Normalizes scores to ensure consistency across different scoring plugins.
+- **Details**: Scores from different plugins are adjusted to a common scale, ensuring fairness in the final decision.
+
+### **1.7 Permit**
+- **Purpose**: Determines whether the Pod can proceed to binding.
+- **Details**: This phase can delay scheduling (e.g., for Pods waiting on external dependencies) or reject the Pod entirely.
+
+### **1.8 Score**
+- **Purpose**: Ranks the remaining Nodes based on their suitability for the Pod.
+- **Details**: Each Node is assigned a score based on factors like resource availability, affinity rules, and other policies. The Node with the highest score is selected.
+
+### **1.9 Reserve**
+- **Purpose**: Reserves resources on the selected Node for the Pod.
+- **Details**: This phase ensures that the Node's resources are allocated to the Pod, preventing other Pods from using them.
+
+### **1.10 PostFilter**
+- **Purpose**: Handles cases where no suitable Node is found for the Pod.
+- **Details**: If no Node passes the filtering phase, this phase can trigger actions like preemption (evicting lower-priority Pods to free up resources).
+
+---
+
+## **2. Binding Cycle**
+
+Once a Node is selected in the Scheduling Cycle, the Binding Cycle is responsible for binding the Pod to the Node. It consists of the following phases:
+
+### **2.1 PreBind**
+- **Purpose**: Performs actions before binding the Pod to the Node.
+- **Details**: This phase can include tasks like mounting volumes or setting up network configurations.
+
+### **2.2 Bind**
+- **Purpose**: Binds the Pod to the selected Node.
+- **Details**: The scheduler updates the Kubernetes API server with the Pod's Node assignment.
+
+### **2.3 PostBind**
+- **Purpose**: Performs cleanup or notification tasks after binding.
+- **Details**: This phase can include logging, metrics collection, or notifying external systems.
+
+### **2.4 Work on Permit**
+- **Purpose**: Handles Pods that were delayed in the Permit phase.
+- **Details**: If a Pod was delayed (e.g., waiting for external dependencies), this phase ensures it is eventually scheduled.
+
+---
+
+## **Summary of Scheduling and Binding Cycles**
+
+### **Scheduling Cycle Phases:**
+1. **Sort**: Orders pending Pods.
+2. **PreEnqueue**: Filters out unschedulable Pods.
+3. **PreFilter**: Performs initial checks.
+4. **Filter**: Filters out unsuitable Nodes.
+5. **PreScore**: Prepares data for scoring.
+6. **Normalize**: Normalizes scores.
+7. **Permit**: Determines if the Pod can proceed.
+8. **Score**: Ranks Nodes.
+9. **Reserve**: Reserves resources on the selected Node.
+10. **PostFilter**: Handles cases where no Node is found.
+
+### **Binding Cycle Phases:**
+1. **PreBind**: Performs pre-binding tasks.
+2. **Bind**: Binds the Pod to the Node.
+3. **PostBind**: Performs post-binding tasks.
+4. **Work on Permit**: Handles delayed Pods.
+
+---
+
+## **Key Notes**
+- The **Scheduling Cycle** is responsible for selecting a Node, while the **Binding Cycle** ensures the Pod is bound to the Node.
+- Each phase in the Scheduling Cycle plays a critical role in ensuring efficient and fair scheduling.
+- The Binding Cycle handles tasks that occur after a Node is selected, such as resource allocation and cleanup.
+- Kubernetes allows customization of the scheduling process through **scheduler plugins**, which can extend or modify the behavior of each phase.
+
+---
+
+## **Example Workflow**
+1. A Pod is created and enters the Scheduling Cycle.
+2. The scheduler filters out unsuitable Nodes and scores the remaining ones.
+3. The highest-scoring Node is selected, and resources are reserved.
+4. The Pod enters the Binding Cycle, where it is bound to the Node.
+5. Post-binding tasks are performed, and the Pod is scheduled successfully.
+
+---
